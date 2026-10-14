@@ -1,6 +1,6 @@
 {
-  "name": "Plain Klondike",
-  "short_name": "Klondike",
+  "name": "DIM8 Solitaire: Klondike",
+  "short_name": "Solitaire",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

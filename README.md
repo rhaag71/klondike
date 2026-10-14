@@ -1,4 +1,4 @@
-# Plain Klondike
+# DIM8 Solitaire: Klondike
 
 Klondike solitaire. No ads, no accounts, no scores sent anywhere, no network calls.
 
