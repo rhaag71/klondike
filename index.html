@@ -120,6 +120,11 @@ body{height:100%;margin:0;background:radial-gradient(ellipse 120% 90% at 50% 25%
         <button type="button" data-deck="classic">Classic</button><button type="button" data-deck="night">DIM8 Night</button><button type="button" data-deck="auto">Match phone</button>
       </div>
     </div>
+    <div class="row"><span class="lbl">Hand</span>
+      <div class="seg" role="group" aria-label="Stock position">
+        <button type="button" data-hand="left">Left</button><button type="button" data-hand="right">Right</button>
+      </div>
+    </div>
     <div class="row"><span class="lbl">Draw</span>
       <div class="seg" role="group" aria-label="Cards per draw">
         <button id="bD1" type="button" aria-pressed="true">1 card</button><button id="bD3" type="button" aria-pressed="false">3 cards</button>
@@ -148,7 +153,12 @@ body{height:100%;margin:0;background:radial-gradient(ellipse 120% 90% at 50% 25%
   const $ = id => document.getElementById(id);
   const els = [];
   let S, up, moves = 0, hist = [], won = false;
-  let opts = { draw: 1, auto: false, deck: 'classic' };
+  let opts = { draw: 1, auto: false, deck: 'classic', hand: 'left' };
+  // Top-row columns. Left hand: stock at far left, foundations right. Right hand: mirrored.
+  const rh = () => opts.hand === 'right';
+  const stockCol = () => rh() ? 6 : 0;
+  const wasteCol = () => rh() ? 5 : 1;
+  const fCol = f => rh() ? f : 3 + f;
   let loc = [], pos = [], prevKey = [], geo = null;
   let autoTimer = null, zTimer = null, drag = null, newArmed = null;
   const slots = {};
@@ -180,7 +190,7 @@ body{height:100%;margin:0;background:radial-gradient(ellipse 120% 90% at 50% 25%
     busyUntil(1900);
     if (geo && prevKey.length) {
       // Gather every card back onto the stock, face down, then deal.
-      const sx = geo.colX(0);
+      const sx = geo.colX(stockCol());
       els.forEach((el, id) => {
         setFace(id, false, 0);
         el.style.transition = ''; el.style.transitionDelay = (id % 13) * 8 + 'ms';
@@ -334,16 +344,16 @@ body{height:100%;margin:0;background:radial-gradient(ellipse 120% 90% at 50% 25%
     board.style.setProperty('--cw', cw + 'px');
     board.style.setProperty('--ch', ch + 'px');
     const put = (el, x, y) => { el.style.transform = 'translate(' + x + 'px,' + y + 'px)'; };
-    put(slots.stock, geo.colX(0), 0);
-    for (let f = 0; f < 4; f++) put(slots['f' + f], geo.colX(3 + f), 0);
+    put(slots.stock, geo.colX(stockCol()), 0);
+    for (let f = 0; f < 4; f++) put(slots['f' + f], geo.colX(fCol(f)), 0);
     for (let t = 0; t < 7; t++) put(slots['t' + t], geo.colX(t), geo.tabY);
   }
   function positions() {
     const { cw, ch, colX, tabY, H } = geo, P = [];
-    S.stock.forEach((id, i) => P[id] = { x: colX(0), y: 0, z: 1 + i });
+    S.stock.forEach((id, i) => P[id] = { x: colX(stockCol()), y: 0, z: 1 + i });
     const wl = S.waste.length, skip = Math.max(0, wl - 3), fan = cw * 0.26;
-    S.waste.forEach((id, i) => { const v = opts.draw === 3 ? Math.max(0, i - skip) : 0; P[id] = { x: colX(1) + v * fan, y: 0, z: 100 + i }; });
-    for (let f = 0; f < 4; f++) S['f' + f].forEach((id, i) => P[id] = { x: colX(3 + f), y: 0, z: 200 + i });
+    S.waste.forEach((id, i) => { const v = opts.draw === 3 ? Math.max(0, i - skip) : 0; P[id] = { x: colX(wasteCol()) + (rh() ? -v : v) * fan, y: 0, z: 100 + i }; });
+    for (let f = 0; f < 4; f++) S['f' + f].forEach((id, i) => P[id] = { x: colX(fCol(f)), y: 0, z: 200 + i });
     for (let t = 0; t < 7; t++) {
       const p = S['t' + t], dn = ch * 0.11, un = ch * 0.3;
       let need = 0; for (let i = 0; i < p.length - 1; i++) need += up[p[i]] ? un : dn;
@@ -397,7 +407,7 @@ body{height:100%;margin:0;background:radial-gradient(ellipse 120% 90% at 50% 25%
   let dealing = false;
   function dealAnimation() {
     if (!geo) measure();
-    els.forEach((el, id) => { el.style.transition = 'none'; setFace(id, false, -1); el.style.translate = geo.colX(0) + 'px 0px'; el.style.zIndex = 1; });
+    els.forEach((el, id) => { el.style.transition = 'none'; setFace(id, false, -1); el.style.translate = geo.colX(stockCol()) + 'px 0px'; el.style.zIndex = 1; });
     void board.offsetHeight;
     prevKey = [];
     let n = 0;
@@ -416,6 +426,7 @@ body{height:100%;margin:0;background:radial-gradient(ellipse 120% 90% at 50% 25%
     $('bD3').setAttribute('aria-pressed', opts.draw === 3);
     $('bAuto').setAttribute('aria-pressed', opts.auto);
     $('bAuto').textContent = opts.auto ? 'On' : 'Off';
+    document.querySelectorAll('button[data-hand]').forEach(b => b.setAttribute('aria-pressed', b.dataset.hand === opts.hand));
     document.querySelectorAll('[data-deck]').forEach(b => { if (b.tagName === 'BUTTON') b.setAttribute('aria-pressed', b.dataset.deck === opts.deck); });
     const fin = canFinish();
     $('bFinish').hidden = !fin;
@@ -434,7 +445,7 @@ body{height:100%;margin:0;background:radial-gradient(ellipse 120% 90% at 50% 25%
       const count = KEYS.reduce((n, k) => n + (S[k] ? S[k].length : 0), 0);
       if (count !== 52 || !Array.isArray(up) || up.length !== 52) return false;
       hist = Array.isArray(o.hist) ? o.hist : [];
-      opts = Object.assign({ draw: 1, auto: false, deck: 'classic' }, o.opts || {});
+      opts = Object.assign({ draw: 1, auto: false, deck: 'classic', hand: 'left' }, o.opts || {});
       won = !!o.won;
       return true;
     } catch (_) { return false; }
@@ -450,7 +461,7 @@ body{height:100%;margin:0;background:radial-gradient(ellipse 120% 90% at 50% 25%
     for (let i = 0; i < 7; i++) { const d = Math.abs(colX(i) + cw / 2 - cx); if (d < bd) { bd = d; col = i; } }
     if (bd > cw / 2 + gap) return null;
     let k;
-    if (cy < ch + gap * 1.5) { if (col < 3) return null; k = 'f' + (col - 3); }
+    if (cy < ch + gap * 1.5) { const f = rh() ? col : col - 3; if (f < 0 || f > 3) return null; k = 'f' + f; }
     else k = 't' + col;
     return (k !== src && canPlace(k, g)) ? k : null;
   }
@@ -523,6 +534,10 @@ body{height:100%;margin:0;background:radial-gradient(ellipse 120% 90% at 50% 25%
   $('bDone').addEventListener('click', closeSheet);
   $('sheet').addEventListener('click', e => { if (e.target.id === 'sheet') closeSheet(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('sheet').hidden) closeSheet(); });
+  document.querySelectorAll('button[data-hand]').forEach(b => b.addEventListener('click', () => {
+    if (opts.hand === b.dataset.hand) return;
+    opts.hand = b.dataset.hand; save(); measure(); render(false);
+  }));
   document.querySelectorAll('button[data-deck]').forEach(b => b.addEventListener('click', () => { opts.deck = b.dataset.deck; save(); applyDeck(); }));
 
   // ---------- boot ----------

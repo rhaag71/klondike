@@ -1,6 +1,6 @@
 // Caches the whole game on first visit, then serves it from cache forever.
 // The game itself makes no network requests. Bump CACHE when you change a file.
-const CACHE = 'plain-klondike-v8';
+const CACHE = 'plain-klondike-v9';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
